@@ -22,16 +22,129 @@
             outline: none;
         }
 
+        /* Responsive Fixes */
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: linear-gradient(135deg, #1a1c2c 0%, #4e54c8 100%);
-            min-height: 100vh;
-            margin: 0;
+            padding: 10px;
+            /* Reduced for mobile */
+        }
+
+        .glass-card {
+            padding: 1.5rem;
+            /* More space for content */
+        }
+
+        input {
+            font-size: 16px;
+            /* Prevents iOS auto-zoom */
+        }
+
+        /* Better Text Overflow Handling */
+        .item-header {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            color: var(--text);
-            padding: 20px;
+            gap: 10px;
+            /* Spacing between name and buttons */
+            overflow: hidden;
+            /* Prevent blowout */
+        }
+
+        .site-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+            /* Take available space */
+        }
+
+        .btn-copy {
+            flex-shrink: 0;
+            /* Don't shrink buttons */
+        }
+
+        /* ... (Previous CSS remains) ... */
+
+        /* ... (Inside App class) ... */
+
+        /* CRUD */
+        async addEntry() {
+            try {
+                const site=this.ui.newSite.value.trim();
+                const user=this.ui.newUser.value.trim();
+                const pass=this.ui.newPass.value.trim();
+                const type=this.ui.newType.value;
+
+                if ( !site || !pass) {
+                    alert("⚠️ Por favor escribe el Sitio y la Contraseña.");
+                    return;
+                }
+
+                // Feedback visual de carga
+                const btn=document.querySelector('button[onclick="app.addEntry()"]');
+                const originalText=btn.innerText;
+                btn.innerText="Guardando...";
+                btn.disabled=true;
+
+                // Add to list
+                this.entries.unshift({
+                    id: Date.now(),
+                    site, user, pass, type,
+                    created: new Date().toISOString()
+                });
+
+            await this.saveVault();
+
+            // Clear inputs
+            this.ui.newSite.value="";
+            this.ui.newUser.value="";
+            this.ui.newPass.value="";
+
+            this.renderEntries();
+
+            // Restore button
+            btn.innerText=originalText;
+            btn.disabled=false;
+
+        }
+
+        catch (e) {
+            alert("❌ Error al guardar: " + e.message);
+            console.error(e);
+            // Revert visual changes if needed
+            const btn=document.querySelector('button[onclick="app.addEntry()"]');
+
+            if(btn) {
+                btn.innerText="Guardar (+)";
+                btn.disabled=false;
+            }
+        }
+        }
+
+        deleteEntry(id) {
+            if (confirm("¿Borrar esta contraseña?")) {
+                this.entries=this.entries.filter(e=> e.id !==id);
+                this.saveVault().catch(e=> alert("Error al guardar cambios: " + e));
+                this.renderEntries();
+            }
+        }
+
+        async saveVault() {
+            if ( !this.masterPassword) throw new Error("Sesión expirada. Recarga la página.");
+
+            try {
+                const encrypted=await this.crypto.encryptData(this.entries, this.masterPassword);
+                localStorage.setItem(this.KEY_DATA, encrypted);
+            }
+
+            catch (e) {
+                if (e.name==='QuotaExceededError') {
+                    throw new Error("Memoria llena en el navegador.");
+                }
+
+                throw e;
+            }
         }
 
         .container {
