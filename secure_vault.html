@@ -101,51 +101,81 @@
 
         /* ... (Inside App class) ... */
 
+        /* ... (Previous CSS remains) ... */
+
+        /* CRUD - Cleaned up CSS */
+        /* Note: JS was accidentally here. Removing it. */
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+        }
+
+        /* ... (Rest of CSS) ... */
+
+        /* ... (Inside App class in SCRIPT tag) ... */
+
         /* CRUD */
         async addEntry() {
             try {
+
+                // Verificaciones previas
+                if ( !this.masterPassword) {
+                    alert("⚠️ Sesión expirada o inválida. Recarga la página.");
+                    return;
+                }
+
                 const site=this.ui.newSite.value.trim();
                 const user=this.ui.newUser.value.trim();
                 const pass=this.ui.newPass.value.trim();
                 const type=this.ui.newType.value;
 
                 if ( !site || !pass) {
-                    alert("⚠️ Por favor escribe el Sitio y la Contraseña.");
+                    alert("⚠️ Faltan datos: Por favor escribe el Nombre del Sitio y la Contraseña.");
                     return;
                 }
 
-                // Feedback visual de carga
+                // Feedback visual
                 const btn=document.querySelector('button[onclick="app.addEntry()"]');
                 const originalText=btn.innerText;
-                btn.innerText="Guardando...";
+                btn.innerText="⏳ Guardando...";
                 btn.disabled=true;
 
-                // Add to list
+                // Agregar a la lista
                 this.entries.unshift({
                     id: Date.now(),
                     site, user, pass, type,
                     created: new Date().toISOString()
                 });
 
+            // Guardar en disco/memoria
             await this.saveVault();
 
-            // Clear inputs
+            // Limpiar formulario se guarda OK
             this.ui.newSite.value="";
             this.ui.newUser.value="";
             this.ui.newPass.value="";
 
             this.renderEntries();
 
-            // Restore button
-            btn.innerText=originalText;
-            btn.disabled=false;
+            // Confirmación visual
+            btn.innerText="✅ ¡Listo!";
+
+            setTimeout(()=> {
+                    btn.innerText=originalText;
+                    btn.disabled=false;
+                }
+
+                , 1500);
 
         }
 
         catch (e) {
-            alert("❌ Error al guardar: " + e.message);
+            // Manejo de errores ruidoso para el usuario
+            alert("❌ ERROR AL GUARDAR:\n" + e.message);
             console.error(e);
-            // Revert visual changes if needed
+
+            // Restaurar botón
             const btn=document.querySelector('button[onclick="app.addEntry()"]');
 
             if(btn) {
@@ -156,15 +186,14 @@
         }
 
         deleteEntry(id) {
-            if (confirm("¿Borrar esta contraseña?")) {
+            if (confirm("¿Borrar esta contraseña permanentemente?")) {
                 this.entries=this.entries.filter(e=> e.id !==id);
-                this.saveVault().catch(e=> alert("Error al guardar cambios: " + e));
-                this.renderEntries();
+                this.saveVault() .then(()=> this.renderEntries()) .catch(e=> alert("❌ No se pudo borrar: " + e.message));
             }
         }
 
         async saveVault() {
-            if ( !this.masterPassword) throw new Error("Sesión expirada. Recarga la página.");
+            if ( !this.masterPassword) throw new Error("No hay llave maestra.");
 
             try {
                 const encrypted=await this.crypto.encryptData(this.entries, this.masterPassword);
@@ -173,16 +202,11 @@
 
             catch (e) {
                 if (e.name==='QuotaExceededError') {
-                    throw new Error("Memoria llena en el navegador.");
+                    throw new Error("El almacenamiento del navegador está lleno.");
                 }
 
-                throw e;
+                throw e; // Relanzar para que lo atrape addEntry
             }
-        }
-
-        .container {
-            width: 100%;
-            max-width: 480px;
         }
 
         /* Glassmorphism Card */
