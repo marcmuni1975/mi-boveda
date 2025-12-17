@@ -99,114 +99,11 @@
 
         /* ... (Previous CSS remains) ... */
 
-        /* ... (Inside App class) ... */
-
         /* ... (Previous CSS remains) ... */
-
-        /* CRUD - Cleaned up CSS */
-        /* Note: JS was accidentally here. Removing it. */
 
         .container {
             width: 100%;
             max-width: 480px;
-        }
-
-        /* ... (Rest of CSS) ... */
-
-        /* ... (Inside App class in SCRIPT tag) ... */
-
-        /* CRUD */
-        async addEntry() {
-            try {
-
-                // Verificaciones previas
-                if ( !this.masterPassword) {
-                    alert("⚠️ Sesión expirada o inválida. Recarga la página.");
-                    return;
-                }
-
-                const site=this.ui.newSite.value.trim();
-                const user=this.ui.newUser.value.trim();
-                const pass=this.ui.newPass.value.trim();
-                const type=this.ui.newType.value;
-
-                if ( !site || !pass) {
-                    alert("⚠️ Faltan datos: Por favor escribe el Nombre del Sitio y la Contraseña.");
-                    return;
-                }
-
-                // Feedback visual
-                const btn=document.querySelector('button[onclick="app.addEntry()"]');
-                const originalText=btn.innerText;
-                btn.innerText="⏳ Guardando...";
-                btn.disabled=true;
-
-                // Agregar a la lista
-                this.entries.unshift({
-                    id: Date.now(),
-                    site, user, pass, type,
-                    created: new Date().toISOString()
-                });
-
-            // Guardar en disco/memoria
-            await this.saveVault();
-
-            // Limpiar formulario se guarda OK
-            this.ui.newSite.value="";
-            this.ui.newUser.value="";
-            this.ui.newPass.value="";
-
-            this.renderEntries();
-
-            // Confirmación visual
-            btn.innerText="✅ ¡Listo!";
-
-            setTimeout(()=> {
-                    btn.innerText=originalText;
-                    btn.disabled=false;
-                }
-
-                , 1500);
-
-        }
-
-        catch (e) {
-            // Manejo de errores ruidoso para el usuario
-            alert("❌ ERROR AL GUARDAR:\n" + e.message);
-            console.error(e);
-
-            // Restaurar botón
-            const btn=document.querySelector('button[onclick="app.addEntry()"]');
-
-            if(btn) {
-                btn.innerText="Guardar (+)";
-                btn.disabled=false;
-            }
-        }
-        }
-
-        deleteEntry(id) {
-            if (confirm("¿Borrar esta contraseña permanentemente?")) {
-                this.entries=this.entries.filter(e=> e.id !==id);
-                this.saveVault() .then(()=> this.renderEntries()) .catch(e=> alert("❌ No se pudo borrar: " + e.message));
-            }
-        }
-
-        async saveVault() {
-            if ( !this.masterPassword) throw new Error("No hay llave maestra.");
-
-            try {
-                const encrypted=await this.crypto.encryptData(this.entries, this.masterPassword);
-                localStorage.setItem(this.KEY_DATA, encrypted);
-            }
-
-            catch (e) {
-                if (e.name==='QuotaExceededError') {
-                    throw new Error("El almacenamiento del navegador está lleno.");
-                }
-
-                throw e; // Relanzar para que lo atrape addEntry
-            }
         }
 
         /* Glassmorphism Card */
