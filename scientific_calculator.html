@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Científica - PyScript</title>
+
+    <!-- Cargar PyScript -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-color: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            color: var(--text-color);
+        }
+
+        .calculator-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            width: 320px;
+        }
+
+        .display {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: right;
+        }
+
+        #result {
+            font-size: 2em;
+            margin: 0;
+            min-height: 48px;
+            word-wrap: break-word;
+        }
+
+        #expression {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.6);
+            margin: 0;
+            min-height: 20px;
+        }
+
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-operator {
+            background: rgba(74, 144, 226, 0.3);
+            font-weight: bold;
+        }
+
+        .btn-equal {
+            background: rgba(46, 204, 113, 0.4);
+            grid-column: span 2;
+        }
+
+        .btn-clear {
+            background: rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-sci {
+            font-size: 0.9em;
+            background: rgba(155, 89, 182, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="calculator-container">
+        <div class="display">
+            <p id="expression"></p>
+            <h2 id="result">0</h2>
+        </div>
+
+        <div class="buttons-grid">
+            <!-- Scientific Row 1 -->
+            <button class="btn-sci" data-func="sin" py-click="add_func">sin</button>
+            <button class="btn-sci" data-func="cos" py-click="add_func">cos</button>
+            <button class="btn-sci" data-func="tan" py-click="add_func">tan</button>
+            <button class="btn-clear" py-click="clear_all">AC</button>
+
+            <!-- Scientific Row 2 -->
+            <button class="btn-sci" data-func="log" py-click="add_func">log</button>
+            <button class="btn-sci" data-func="sqrt" py-click="add_func">√</button>
+            <button class="btn-sci" data-op="**" py-click="add_operator">^</button>
+            <button class="btn-operator" data-op="/" py-click="add_operator">÷</button>
+
+            <!-- Numbers Row 1 -->
+            <button data-num="7" py-click="add_number">7</button>
+            <button data-num="8" py-click="add_number">8</button>
+            <button data-num="9" py-click="add_number">9</button>
+            <button class="btn-operator" data-op="*" py-click="add_operator">×</button>
+
+            <!-- Numbers Row 2 -->
+            <button data-num="4" py-click="add_number">4</button>
+            <button data-num="5" py-click="add_number">5</button>
+            <button data-num="6" py-click="add_number">6</button>
+            <button class="btn-operator" data-op="-" py-click="add_operator">-</button>
+
+            <!-- Numbers Row 3 -->
+            <button data-num="1" py-click="add_number">1</button>
+            <button data-num="2" py-click="add_number">2</button>
+            <button data-num="3" py-click="add_number">3</button>
+            <button class="btn-operator" data-op="+" py-click="add_operator">+</button>
+
+            <!-- Zero and Equals -->
+            <button data-num="0" py-click="add_number">0</button>
+            <button data-num="." py-click="add_number">.</button>
+            <button class="btn-equal" py-click="calculate">=</button>
+        </div>
+    </div>
+
+    <script type="py">
+    from pyscript import display, document
+    import math
+
+    # Current expression state
+    current_expression = ""
+    last_result = False
+
+    def update_display(res=""):
+        global current_expression
+        
+        # Update expression view
+        expr_el = document.querySelector("#expression")
+        expr_el.innerHTML = current_expression if current_expression else ""
+        
+        # Update result view only if we have a calculated result or empty state
+        res_el = document.querySelector("#result")
+        
+        if res != "":
+            res_el.innerHTML = str(res)
+        elif current_expression == "":
+            res_el.innerHTML = "0"
+
+    def add_number(event):
+        global current_expression, last_result
+        # Get value from data-num attribute
+        num = event.target.getAttribute("data-num")
+        
+        if last_result:
+            current_expression = num
+            last_result = False
+        else:
+            current_expression += num
+        update_display()
+
+    def add_operator(event):
+        global current_expression, last_result
+        # Get value from data-op attribute
+        op = event.target.getAttribute("data-op")
+        
+        last_result = False
+        current_expression += op
+        update_display()
+
+    def add_func(event):
+        global current_expression, last_result
+        # Get value from data-func attribute
+        func_name = event.target.getAttribute("data-func")
+        
+        last_result = False
+        if func_name == 'sqrt':
+            current_expression += 'math.sqrt('
+        else:
+            current_expression += f'math.{func_name}('
+        update_display()
+
+    def clear_all(event):
+        global current_expression, last_result
+        current_expression = ""
+        last_result = False
+        update_display()
+        display("0", target="result")
+
+    def calculate(event):
+        global current_expression, last_result
+        if not current_expression:
+            return
+
+        try:
+            # Safe evaluation context
+            result = eval(current_expression, {"__builtins__": None}, {"math": math})
+            
+            # Format result
+            if isinstance(result, float):
+                # Round to 8 decimals to avoid floating point artifacts
+                result = round(result, 8)
+                if result.is_integer():
+                    result = int(result)
+            
+            display(result, target="result")
+            last_result = True
+            
+        except Exception as e:
+            display("Error", target="result")
+            # print(f"Error: {e}") # Optional logging
+            last_result = True
+            current_expression = ""
+</script>
+
+</body>
+
+</html>

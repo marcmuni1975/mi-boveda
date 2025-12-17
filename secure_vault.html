@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Vault - Gestor de Contraseñas</title>
+    <style>
+        :root {
+            --primary: #4e54c8;
+            --secondary: #8f94fb;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --danger: #ff6b6b;
+            --success: #51cf66;
+        }
+
+        * {
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1c2c 0%, #4e54c8 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+        }
+
+        /* Glassmorphism Card */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        h1,
+        h2 {
+            margin-top: 0;
+            text-align: center;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        /* Forms */
+        .input-group {
+            margin-bottom: 1.2rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: var(--secondary);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(78, 84, 200, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-sm {
+            padding: 8px;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            margin-top: 10px;
+        }
+
+        /* Views */
+        .hidden {
+            display: none;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* List Items */
+        .password-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 1.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .password-item {
+            background: rgba(255, 255, 255, 0.05);
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .password-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--glass-border);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .site-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .item-details {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            padding: 4px 10px;
+            width: auto;
+            font-size: 0.8rem;
+        }
+
+        /* Utility */
+        .search-bar {
+            margin-bottom: 1rem;
+        }
+
+        .status-msg {
+            text-align: center;
+            min-height: 20px;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .error {
+            color: var(--danger);
+        }
+
+        .success {
+            color: var(--success);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- Login View -->
+        <div id="login-view" class="glass-card fade-in">
+            <h1>🔐 Secure Vault</h1>
+            <p style="text-align: center; color: var(--text-muted);">Tus datos encriptados localmente (AES-GCM)</p>
+
+            <form id="login-form">
+                <div class="input-group">
+                    <input type="password" id="master-password" placeholder="Ingresa tu Llave Maestra" required
+                        autocomplete="current-password">
+                </div>
+                <div id="login-msg" class="status-msg"></div>
+                <button type="submit">Desbloquear Bóveda</button>
+            </form>
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="btn-link" onclick="app.showRecovery()"
+                    style="background:none; border:none; text-decoration: underline; color: var(--text-muted); cursor: pointer;">¿Olvidaste
+                    tu contraseña?</button>
+            </div>
+            <p id="first-time-hint" class="hidden"
+                style="text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem;">
+                <b>Primera vez:</b> La contraseña que ingreses será tu Llave Maestra.
+            </p>
+        </div>
+
+        <!-- Recovery View -->
+        <div id="recovery-view" class="glass-card hidden">
+            <h2>🔄 Recuperar Acceso</h2>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">
+                Ingresa el <b>Código de Recuperación</b> que guardaste cuando creaste tu cuenta. Esto revelará tu Llave
+                Maestra.
+            </p>
+            <form id="recovery-form">
+                <div class="input-group">
+                    <input type="text" id="recovery-code-input" placeholder="Código (ej. A1B2-C3D4...)" required>
+                </div>
+                <div id="recovery-msg" class="status-msg hidden"></div>
+                <button type="submit">Recuperar Llave</button>
+                <button type="button" class="btn-sm"
+                    style="background:none; border:none; text-decoration:underline; color:var(--text-muted)"
+                    onclick="app.showLogin()">Volver</button>
+            </form>
+        </div>
+
+        <!-- Setup View (New Account) -->
+        <div id="setup-view" class="glass-card hidden">
+            <h2 style="color: var(--warning);">⚠️ IMPORTANTE</h2>
+            <p>Tu bóveda ha sido creada.</p>
+            <div
+                style="background: rgba(252, 196, 25, 0.15); border: 1px solid var(--warning); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                <p style="margin:0 0 10px 0;">Guarda este <b>Código de Recuperación</b>. Es la <b>única forma</b> de
+                    recuperar tu contraseña.</p>
+                <div id="new-recovery-code"
+                    style="font-family: monospace; font-size: 1.2rem; background: rgba(0,0,0,0.4); padding: 10px; text-align: center; border-radius: 8px; margin: 10px 0; border: 1px dashed var(--glass-border); user-select: text;">
+                </div>
+                <button onclick="app.copyRecoveryCode()" class="btn-copy">Copiar Código</button>
+            </div>
+            <button onclick="app.finishSetup()">Entendido, ir a mi Bóveda</button>
+        </div>
+
+        <!-- Vault View -->
+        <div id="vault-view" class="glass-card hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin:0;">Mi Bóveda</h2>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="app.exportBackup()" class="btn-copy"
+                        style="width: auto; padding: 8px 15px; border-color: var(--success); color: var(--success);">⬇️
+                        Exportar</button>
+                    <button onclick="app.triggerImport()" class="btn-copy"
+                        style="width: auto; padding: 8px 15px; border-color: var(--secondary); color: var(--secondary);">⬆️
+                        Importar</button>
+                    <button onclick="app.showInternalRecovery()" class="btn-copy"
+                        style="width: auto; padding: 8px 15px; background: rgba(252, 196, 25, 0.2); border-color: var(--warning); color: var(--warning);">🔑
+                        Llave</button>
+                    <button onclick="app.logout()" class="btn-copy" style="width: auto; padding: 8px 15px;">Salir
+                        🔒</button>
+                </div>
+            </div>
+
+            <!-- Add Password Form -->
+            <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                <div class="input-group">
+                    <input type="text" id="new-site" placeholder="Sitio / Descripción (ej. Banco)">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="input-group" style="flex:1;">
+                        <input type="text" id="new-username" placeholder="Usuario / ID">
+                    </div>
+                    <div class="input-group" style="width: 100px;">
+                        <select id="new-type" style="padding: 12px 5px;">
+                            <option value="pass">Clave</option>
+                            <option value="pin">PIN</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="new-password" placeholder="Contraseña o PIN">
+                </div>
+                <button onclick="app.addEntry()">Guardar (+)</button>
+            </div>
+
+            <!-- Search & List -->
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="🔍 Buscar por nombre, usuario o clave..."
+                    onkeyup="app.filterEntries()">
+            </div>
+
+            <ul id="password-list" class="password-list">
+                <!-- Items injected here -->
+            </ul>
+        </div>
+
+        <!-- Internal Recovery Management (Modal-like) -->
+        <div id="internal-recovery-view" class="glass-card hidden">
+            <h2>🔑 Gestión de Recuperación</h2>
+            <p style="text-align:center; color: var(--text-muted);">
+                Este código te permite recuperar tu contraseña maestra si la olvidas.
+            </p>
+
+            <div id="internal-code-box" class="warning-box hidden">
+                <p style="margin:0 0 5px 0; font-size:0.9rem;">Tu Código de Recuperación:</p>
+                <div id="current-recovery-code" class="code-display"></div>
+                <button onclick="app.copyInternalCode()" class="btn-copy">Copiar</button>
+            </div>
+
+            <div id="internal-generate-box" style="text-align:center;">
+                <p style="font-size:0.9rem; color: var(--warning);">
+                    ⚠️ Generar un nuevo código invalidará el anterior.
+                </p>
+                <button onclick="app.regenerateCode()" style="background: var(--warning); color: #333;">Generar Nuevo
+                    Código</button>
+            </div>
+
+            <button onclick="app.showView('vault-view')" class="btn-link" style="margin-top:20px;">Volver a la
+                Bóveda</button>
+        </div>
+
+        <!-- Storage Container (The Encrypted Database lives here) -->
+        <div id="vault-data" style="display:none;"></div>
+        <div id="recovery-data" style="display:none;"></div>
+
+        <!-- Import Input -->
+        <input type="file" id="import-file" style="display:none" accept=".json,.txt"
+            onchange="app.handleFileImport(this)">
+
+    </div>
+
+    <script>
+        /**
+         * CryptoManager: Handles encryption/decryption
+         */
+        class CryptoManager {
+            // Generate a random string for recovery code
+            generateRecoveryCode() {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                let code = '';
+                const array = new Uint32Array(16);
+                window.crypto.getRandomValues(array);
+                for (let i = 0; i < 16; i++) {
+                    code += chars[array[i] % chars.length];
+                    if ((i + 1) % 4 === 0 && i < 15) code += '-';
+                }
+                return code;
+            }
+
+            async deriveKey(password, salt) {
+                const enc = new TextEncoder();
+                const keyMaterial = await window.crypto.subtle.importKey(
+                    "raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]
+                );
+                return window.crypto.subtle.deriveKey(
+                    { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+                    keyMaterial, { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
+                );
+            }
+
+            async encryptData(data, password) {
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const key = await this.deriveKey(password, salt);
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+                const enc = new TextEncoder();
+                const encodedData = enc.encode(JSON.stringify(data));
+
+                const cipherText = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv }, key, encodedData
+                );
+
+                const buffer = new Uint8Array(salt.length + iv.length + cipherText.byteLength);
+                buffer.set(salt, 0); buffer.set(iv, salt.length); buffer.set(new Uint8Array(cipherText), salt.length + iv.length);
+
+                return this.arrayBufferToBase64(buffer);
+            }
+
+            async decryptData(base64Data, password) {
+                try {
+                    const buffer = this.base64ToArrayBuffer(base64Data);
+                    const view = new Uint8Array(buffer);
+                    const salt = view.slice(0, 16);
+                    const iv = view.slice(16, 28);
+                    const cipherText = view.slice(28); // Rest is cipher
+
+                    const key = await this.deriveKey(password, salt);
+
+                    const decryptedBuffer = await window.crypto.subtle.decrypt(
+                        { name: "AES-GCM", iv: iv }, key, cipherText
+                    );
+
+                    const dec = new TextDecoder();
+                    return JSON.parse(dec.decode(decryptedBuffer));
+                } catch (e) {
+                    throw new Error("Clave inválida");
+                }
+            }
+
+            arrayBufferToBase64(buffer) {
+                let binary = '';
+                const bytes = new Uint8Array(buffer);
+                for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+                return window.btoa(binary);
+            }
+
+            base64ToArrayBuffer(base64) {
+                const binary_string = window.atob(base64);
+                const bytes = new Uint8Array(binary_string.length);
+                for (let i = 0; i < binary_string.length; i++) bytes[i] = binary_string.charCodeAt(i);
+                return bytes.buffer;
+            }
+        }
+
+        /**
+         * App Logic - Hybrid (LocalStorage + Import/Export)
+         */
+        class App {
+            constructor() {
+                this.crypto = new CryptoManager();
+                this.entries = [];
+                this.masterPassword = null;
+                this.tempRecoveryCode = null;
+
+                // Storage Keys (LocalStorage)
+                this.KEY_DATA = 'secure_vault_data';
+                this.KEY_RECOVERY = 'secure_vault_recovery';
+                this.KEY_RECOVERY_BACKUP = 'secure_vault_recovery_backup';
+
+                this.ui = {
+                    loginView: document.getElementById('login-view'),
+                    setupView: document.getElementById('setup-view'),
+                    vaultView: document.getElementById('vault-view'),
+                    recoveryView: document.getElementById('recovery-view'),
+                    internalRecoveryView: document.getElementById('internal-recovery-view'),
+
+                    loginForm: document.getElementById('login-form'),
+                    recoveryForm: document.getElementById('recovery-form'),
+                    masterPass: document.getElementById('master-password'),
+                    recoveryInput: document.getElementById('recovery-code-input'),
+
+                    loginMsg: document.getElementById('login-msg'),
+                    recoveryMsg: document.getElementById('recovery-msg'),
+                    newRecoveryCode: document.getElementById('new-recovery-code'),
+
+                    passList: document.getElementById('password-list'),
+                    searchInput: document.getElementById('search-input'),
+
+                    newSite: document.getElementById('new-site'),
+                    newUser: document.getElementById('new-username'),
+                    newPass: document.getElementById('new-password'),
+                    newType: document.getElementById('new-type'),
+
+                    internalCodeBox: document.getElementById('internal-code-box'),
+                    currentRecoveryCode: document.getElementById('current-recovery-code'),
+
+                    // Import Input
+                    importInput: document.getElementById('import-file'),
+
+                    // Legacy DOM elements (ignored now)
+                    vaultData: document.getElementById('vault-data'),
+                    recoveryData: document.getElementById('recovery-data')
+                };
+
+                this.init();
+            }
+
+            init() {
+                this.ui.loginForm.addEventListener('submit', (e) => { e.preventDefault(); this.handleLogin(); });
+                this.ui.recoveryForm.addEventListener('submit', (e) => { e.preventDefault(); this.handleRecovery(); });
+
+                // Check localStorage
+                if (!localStorage.getItem(this.KEY_DATA)) {
+                    document.getElementById('first-time-hint').classList.remove('hidden');
+                }
+
+                // Remove any unload warning
+                window.onbeforeunload = null;
+            }
+
+            /* Core Auth */
+            async handleLogin() {
+                const pass = this.ui.masterPass.value;
+                if (!pass) return;
+                this.setMessage(this.ui.loginMsg, "Procesando...", "text");
+
+                const storedData = localStorage.getItem(this.KEY_DATA);
+
+                if (!storedData) {
+                    await this.setupNewVault(pass);
+                } else {
+                    try {
+                        this.entries = await this.crypto.decryptData(storedData, pass);
+                        this.masterPassword = pass;
+                        this.showView('vault-view');
+                        this.renderEntries();
+                    } catch (e) {
+                        this.setMessage(this.ui.loginMsg, "Contraseña incorrecta", "error");
+                        this.ui.masterPass.value = "";
+                    }
+                }
+            }
+
+            async setupNewVault(password) {
+                this.masterPassword = password;
+                this.entries = [];
+                await this.generateAndSaveRecovery(password);
+                await this.saveVault();
+
+                this.ui.newRecoveryCode.textContent = this.tempRecoveryCode;
+                this.showView('setup-view');
+            }
+
+            finishSetup() {
+                this.tempRecoveryCode = null;
+                this.showView('vault-view');
+            }
+
+            async generateAndSaveRecovery(password) {
+                this.tempRecoveryCode = this.crypto.generateRecoveryCode();
+                // Encrypt Master with Code
+                const encryptedMaster = await this.crypto.encryptData(password, this.tempRecoveryCode);
+                localStorage.setItem(this.KEY_RECOVERY, encryptedMaster);
+                // Encrypt Code with Master
+                const encryptedCode = await this.crypto.encryptData(this.tempRecoveryCode, password);
+                localStorage.setItem(this.KEY_RECOVERY_BACKUP, encryptedCode);
+            }
+
+            /* CRUD */
+            async addEntry() {
+                const site = this.ui.newSite.value.trim();
+                const user = this.ui.newUser.value.trim();
+                const pass = this.ui.newPass.value.trim();
+                const type = this.ui.newType.value;
+
+                if (!site || !pass) { alert("Faltan datos."); return; }
+
+                this.entries.unshift({
+                    id: Date.now(),
+                    site, user, pass, type,
+                    created: new Date().toISOString()
+                });
+
+                this.ui.newSite.value = "";
+                this.ui.newUser.value = "";
+                this.ui.newPass.value = "";
+
+                await this.saveVault();
+                this.renderEntries();
+            }
+
+            deleteEntry(id) {
+                if (confirm("¿Borrar?")) {
+                    this.entries = this.entries.filter(e => e.id !== id);
+                    this.saveVault();
+                    this.renderEntries();
+                }
+            }
+
+            async saveVault() {
+                if (!this.masterPassword) return;
+                const encrypted = await this.crypto.encryptData(this.entries, this.masterPassword);
+                localStorage.setItem(this.KEY_DATA, encrypted);
+            }
+
+            /* Export / Import Features */
+            async exportBackup() {
+                if (!this.masterPassword) return;
+
+                const backupData = {
+                    vault: localStorage.getItem(this.KEY_DATA),
+                    recovery: localStorage.getItem(this.KEY_RECOVERY),
+                    recovery_backup: localStorage.getItem(this.KEY_RECOVERY_BACKUP),
+                    date: new Date().toISOString()
+                };
+
+                const blob = new Blob([JSON.stringify(backupData)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `respaldo_boveda_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+
+            triggerImport() {
+                this.ui.importInput.click();
+            }
+
+            async handleFileImport(input) {
+                const file = input.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.vault && data.recovery) {
+                            if (confirm("⚠️ IMPORTAR REEMPLAZARÁ TODOS LOS DATOS ACTUALES.\n¿Estás seguro?")) {
+                                localStorage.setItem(this.KEY_DATA, data.vault);
+                                localStorage.setItem(this.KEY_RECOVERY, data.recovery);
+                                if (data.recovery_backup) localStorage.setItem(this.KEY_RECOVERY_BACKUP, data.recovery_backup);
+
+                                alert("Importación exitosa. La página se recargará.");
+                                location.reload();
+                            }
+                        } else {
+                            alert("Archivo de respaldo inválido.");
+                        }
+                    } catch (err) {
+                        alert("Error al leer el archivo.");
+                    }
+                };
+                reader.readAsText(file);
+                input.value = ""; // Reset
+            }
+
+            /* Recovery */
+            showRecovery() {
+                if (!localStorage.getItem(this.KEY_RECOVERY)) { alert("No configurado."); return; }
+                this.showView('recovery-view');
+                this.setMessage(this.ui.recoveryMsg, "", "hidden");
+            }
+
+            async handleRecovery() {
+                const code = this.ui.recoveryInput.value.trim().toUpperCase();
+                if (!code) return;
+                const encryptedMaster = localStorage.getItem(this.KEY_RECOVERY);
+
+                try {
+                    const recoveredPass = await this.crypto.decryptData(encryptedMaster, code);
+                    this.setMessage(this.ui.recoveryMsg, `Tu Clave: ${recoveredPass}`, "success");
+                } catch (e) {
+                    this.setMessage(this.ui.recoveryMsg, "Código incorrecto", "error");
+                }
+            }
+
+            async showInternalRecovery() {
+                this.showView('internal-recovery-view');
+                const backup = localStorage.getItem(this.KEY_RECOVERY_BACKUP);
+                if (backup && this.masterPassword) {
+                    try {
+                        const code = await this.crypto.decryptData(backup, this.masterPassword);
+                        this.ui.currentRecoveryCode.textContent = code;
+                        this.ui.internalCodeBox.classList.remove('hidden');
+                    } catch (e) { this.ui.internalCodeBox.classList.add('hidden'); }
+                }
+            }
+
+            async regenerateCode() {
+                if (!confirm("Se generará un nuevo código.")) return;
+                await this.generateAndSaveRecovery(this.masterPassword);
+                this.showInternalRecovery();
+                alert("¡Nuevo código generado!");
+            }
+
+            /* Shared UI */
+            copyInternalCode() { this.copyToClip(this.ui.currentRecoveryCode.textContent); alert("Copiado"); }
+            copyRecoveryCode() { this.copyToClip(this.tempRecoveryCode); alert("Copiado"); }
+
+            showLogin() { this.showView('login-view'); this.ui.masterPass.value = ""; this.setMessage(this.ui.loginMsg, "", "hidden"); }
+            showView(viewId) { document.querySelectorAll('.glass-card').forEach(el => el.classList.add('hidden')); document.getElementById(viewId).classList.remove('hidden'); document.getElementById(viewId).classList.add('fade-in'); }
+            logout() { location.reload(); }
+
+            renderEntries(filterText = "") {
+                this.ui.passList.innerHTML = "";
+                const lower = filterText.toLowerCase();
+                const filtered = this.entries.filter(e => e.site.toLowerCase().includes(lower) || (e.user && e.user.toLowerCase().includes(lower)) || e.pass.toLowerCase().includes(lower));
+
+                if (filtered.length === 0) { this.ui.passList.innerHTML = "<li style='text-align:center; color:var(--text-muted)'>Sin resultados.</li>"; return; }
+
+                filtered.forEach(entry => {
+                    const li = document.createElement('li');
+                    li.className = 'password-item';
+                    const typeLabel = entry.type === 'pin' ? '<span class="tag-pin">PIN</span>' : '';
+                    li.innerHTML = `
+                        <div class="item-header"><span class="site-name">${this.escape(entry.site)} ${typeLabel}</span>
+                            <div>
+                                <button class="btn-copy" onclick="app.copyToClip('${this.escape(entry.pass)}')">Copiar</button>
+                                <button class="btn-copy" style="border-color:var(--danger); color:var(--danger)" onclick="app.deleteEntry(${entry.id})">×</button>
+                            </div>
+                        </div>
+                        <div class="item-details">${entry.user ? `👤 ${this.escape(entry.user)}<br>` : ''}
+                            <div style="margin-top:5px; display:flex; align-items:center;"><span class="secret-field">${this.escape(entry.pass)}</span></div>
+                        </div>`;
+                    this.ui.passList.appendChild(li);
+                });
+            }
+
+            filterEntries() { this.renderEntries(this.ui.searchInput.value); }
+            setMessage(el, msg, type) { el.textContent = msg; el.className = `status-msg ${type}`; if (type === 'hidden') el.classList.add('hidden'); }
+            copyToClip(text) { navigator.clipboard.writeText(text); }
+            escape(str) { if (!str) return ""; return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+        }
+
+        try {
+            // Verificar compatibilidad antes de iniciar
+            if (!window.crypto || !window.crypto.subtle) {
+                throw new Error("🛑 TU NAVEGADOR ESTÁ BLOQUEANDO LA SEGURIDAD\n\nSafari en iOS restringue la encriptación (WebCrypto) en archivos locales.\n\nSOLUCIÓN: Debes subir este archivo a un servidor web (como GitHub Pages o Netlify) para usarlo en iPhone.");
+            }
+            try {
+                localStorage.setItem('test_storage', '1');
+                localStorage.removeItem('test_storage');
+            } catch (e) {
+                throw new Error("🛑 ALMACENAMIENTO BLOQUEADO\n\nSafari en iPhone no permite guardar datos (LocalStorage) en archivos abiertos directamente.\n\nSOLUCIÓN: Sube este archivo a una web o usa una App de 'Servidor Local'.");
+            }
+
+            const app = new App();
+        } catch (err) {
+            document.body.innerHTML = `
+                <div style="display:flex; justify-content:center; align-items:center; height:100vh; padding:20px; text-align:center; background:#1a1c2c; color:white; font-family:sans-serif;">
+                    <div style="max-width:400px; background:rgba(255,20,20,0.1); border:1px solid #ff6b6b; padding:20px; border-radius:12px;">
+                        <h2 style="color:#ff6b6b; margin-top:0;">⚠️ No se puede ejecutar aquí</h2>
+                        <p style="font-size:1.1rem; line-height:1.5;">${err.message.replace(/\n/g, '<br>')}</p>
+                    </div>
+                </div>
+            `;
+            console.error(err);
+        }
+    </script>
+</body>
+
+</html>

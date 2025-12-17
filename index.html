@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejemplo PyScript - Python en HTML</title>
+    
+    <!-- Cargar PyScript (CSS y JS) -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            line-height: 1.5;
+            background-color: #f0f4f8;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2c3e50; }
+        .output-box {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-top: 1rem;
+            min-height: 50px;
+        }
+        input {
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 0.5rem;
+        }
+        button {
+            padding: 0.5rem 1rem;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🐍 Python corriendo en el Navegador</h1>
+    <p>Esta página demuestra cómo usar <b>PyScript</b> para ejecutar código Python directamente en tu archivo HTML, sin necesidad de un servidor backend.</p>
+
+    <!-- Ejemplo 1: Script simple al cargar -->
+    <section>
+        <h2>Ejemplo 1: Saludo Automático</h2>
+        <div id="output-1" class="output-box">Cargando Python...</div>
+        
+        <!-- Script de Python en línea -->
+        <script type="py">
+            from pyscript import display
+            import datetime
+
+            now = datetime.datetime.now().strftime("%H:%M:%S")
+            display(f"¡Hola! Son las {now}. ¡Python está vivo en tu HTML!", target="output-1")
+        </script>
+    </section>
+
+    <hr>
+
+    <!-- Ejemplo 2: Interacción con botones -->
+    <section>
+        <h2>Ejemplo 2: Interacción</h2>
+        <p>Escribe tu nombre y haz clic en el botón (procesado con Python):</p>
+        <div>
+            <input type="text" id="name-input" placeholder="Tu nombre aquí">
+            <button py-click="greet_user">Saludar</button>
+        </div>
+        <div id="output-2" class="output-box">Esperando input...</div>
+
+        <!-- Script de Python para manejar eventos -->
+        <script type="py">
+            from pyscript import display, document
+
+            def greet_user(event):
+                # Obtener el valor del input usando el DOM
+                input_el = document.querySelector("#name-input")
+                name = input_el.value
+                
+                if name:
+                    msg = f"¡Mucho gusto, {name}! Procesado con Python 🐍"
+                else:
+                    msg = "Por favor escribe un nombre primero."
+                
+                # Mostrar resultado
+                display(msg, target="output-2")
+        </script>
+    </section>
+</div>
+
+</body>
+</html>
